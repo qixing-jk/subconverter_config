@@ -1,0 +1,317 @@
+# 代理组和代理组提供者相关
+proxy-providers-config: &proxy-providers-config
+  type: http
+  interval: 3600
+  health-check:
+    enable: true
+    url: https://www.gstatic.com/generate_204
+    interval: 300
+
+# url 里填写自己的订阅,名称不能重复，多个机场则在后面加
+proxy-providers:
+  Provider1:
+    <<: *proxy-providers-config 
+    url: ""
+    path: ./proxy_providers/Provider1.yaml
+  Provider2:
+    <<: *proxy-providers-config
+    url: ""
+    path: ./proxy_providers/Provider2.yaml
+
+use_proxy_providers: &use_proxy_providers
+  use:    # 添加机场后要user下也添加
+  - Provider1
+  - Provider2
+
+port: 10802             # HTTP 代理端口
+socks-port: 10803       # Socks 端口
+mixed-port: 10804       # 混合端口
+redir-port: 10805       # Redir 端口 redirect端口仅限 Linux(Android) 以及 macOS 适用,tproxy 端口仅限 linux(Android) 适用
+allow-lan: false        # 允许局域网连接
+bind-address: "*"       # 地址绑定
+mode: rule              # 规则模式
+log-level: info         # 日志级别
+ipv6: false             # IPV6开关
+
+tcp-concurrent: true    # TCP并发
+unified-delay: false    # 同一延迟 更换延迟计算方式,去除握手等额外延迟
+
+# 控制是否让 Clash 去匹配进程
+# always 开启，强制匹配所有进程
+# strict 默认，由 Clash 判断是否开启
+# off 不匹配进程，推荐在路由器上使用此模式
+find-process-mode: strict
+
+# 全局 TLS 指纹，优先低于 proxy 内的 client-fingerprint。目前支持开启 TLS 传输的 TCP/grpc/WS/HTTP , 支持协议有 VLESS,Vmess 和 trojan.
+global-client-fingerprint: chrome 
+
+profile:                  # 缓存
+  store-selected: true    # 储存 API 对策略组的选择，以供下次启动时使用
+  store-fake-ip: true     # 储存 fakeip 映射表，域名再次发生连接时，使用原有映射地址
+
+# sniffer:  # 嗅探
+#   enable: true
+#   sniff:
+#     TLS:
+#       ports: [443, 8443]
+#     HTTP:
+#       ports: [80, 8080-8880]
+#       override-destination: true
+
+external-controller: 127.0.0.1:9090         # 外部控制器
+external-ui-url: "https://github.com/MetaCubeX/metacubexd/archive/refs/heads/gh-pages.zip" # 自定义外部用户界面下载地址
+
+tun:  # tun 模式
+  enable: true
+  stack: system
+  dns-hijack:                     # dns 劫持
+    - 'any:53'
+  auto-route: true                # 自动设置全局路由
+  auto-detect-interface: true     # 自动选择流量出口接口
+
+hosts:
+  "*.clash.dev": 127.0.0.1
+  .dev: 127.0.0.1
+  alpha.clash.dev: ::1
+  dns.google: 8.8.8.8
+
+dns:
+  enable: true       # 不使用系统 DNS
+  ipv6: false        # 关闭 IPV6
+  listen: 0.0.0.0:53 # dns 监听
+  use-hosts: true
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  fake-ip-filter: # 以下地址不会下发 fakeip 映射用于连接
+    - "*.lan"
+    - localhost.ptlogin2.qq.com
+    - +.srv.nintendo.net
+    - +.stun.playstation.net
+    - +.msftconnecttest.com
+    - +.msftncsi.com
+    - +.xboxlive.com
+    - msftconnecttest.com
+    - xbox.*.microsoft.com
+    - "*.battlenet.com.cn"
+    - "*.battlenet.com"
+    - "*.blzstatic.cn"
+    - "*.battle.net"
+  default-nameserver: #用于解析 DNS 服务器 的域名(必须为 ip, 可为加密 dns)
+    - 223.5.5.5
+  proxy-server-nameserver: #代理节点域名解析服务器，仅用于解析代理节点的域名
+    - https://doh.pub/dns-query
+  nameserver-policy:
+    # "geosite:cn,private":
+    #   - https://doh.pub/dns-query
+    #   - https://dns.alidns.com/dns-query
+    'www.baidu.com': '114.114.114.114'
+    '+.internal.crop.com': '10.0.0.1'
+    'geosite:geolocation-!cn': [tls://8.8.4.4, https://1.0.0.1/dns-query]
+    'www.baidu.com,+.google.cn': https://doh.pub/dns-query
+    'geosite:private,apple': https://dns.alidns.com/dns-query
+  nameserver:        # 默认 DNS 服务
+    - dhcp://eh0 # 来自 dhcp 的 dns
+    - 180.76.76.76 # 百度
+    - 114.114.114.114 #114DSN
+    - 114.114.115.115 #114DSN
+    - 101.226.4.6 # 360电信专用
+    - 223.5.5.5 # 阿里
+    - 119.29.29.29 # 腾讯DNSPod
+  fallback:          # 后备域名解析服务器，一般情况下使用境外 DNS, 保证结果可信
+    # - tls://8.8.4.4 # Google 备用
+    # - tls://101.101.101.101 #Quad 101
+    # - tls://1.0.0.1:853 # cf
+    - 1.2.4.8
+    - 156.154.70.22
+    - 156.154.70.25
+    - 210.0.255.251
+    # - 210.181.4.25 # 韩国梦想
+    # - 164.124.101.2
+    # - 203.239.131.1
+    # - 168.95.192.1
+    # - 101.101.101.101 # Quad 101
+    # - 208.67.220.123 # OpenDNS
+    # - 208.67.222.222 # OpenDNS
+    # - 8.8.8.8 # Google
+    # - 4.2.2.1 # 微软
+    # - 210.80.58.3
+    # - https://cloudflare-dns.com/dns-query
+    # - https://dns.google/dns-query
+    # - https://dns.alidns.com/dns-query
+  fallback-filter:    # 后备域名解析服务器筛选，满足条件的将使用 fallback结果或只使用 fallback解析
+    geoip: true
+    geoip-code: CN
+    ipcidr:
+      - 240.0.0.0/4
+
+geodata-mode: true
+geox-url:
+  geoip: "https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/geoip.dat"
+  geosite: "https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/geosite.dat"
+  mmdb: "https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/country.mmdb"
+
+proxies:
+  # - name: "WARP"
+  #   type: wireguard
+  #   server: engage.cloudflareclient.com
+  #   port: 2408
+  #   ip: "172.16.0.2/32"
+  #   ipv6: "2606::1/128"        # 自行替换
+  #   private-key: "private-key" # 自行替换
+  #   public-key: "public-key"   # 自行替换
+  #   udp: true
+  #   reserved: "abba"           # 自行替换
+  #   mtu: 1280
+  #   dialer-proxy: "dns"
+  #   remote-dns-resolve: true
+  #   dns:
+  #     - https://dns.cloudflare.com/dns-query
+
+proxy_group_list: &proxy_group_list [🚀 节点选择,♻️ 自动选择,⚡ 专线节点,🚀 手动切换1,🚀 手动切换2,🚀 手动切换3,🇭🇰 香港,🇹🇼 台湾,🇯🇵 日本,🇺🇲 美国,🇸🇬 新加坡,🇮🇳 印度,🎯 全球直连]
+
+AI_proxy_group_list: &AI_proxy_group_list [🇺🇲 美国,🚀 手动切换1,🚀 手动切换2,🚀 手动切换3,🚀 节点选择,♻️ 自动选择,⚡ 专线节点,🇭🇰 香港,🇹🇼 台湾,🇯🇵 日本,🇸🇬 新加坡,🇮🇳 印度]
+
+proxy_group_config: &proxy_group_config   # proxy 相关
+  type: select
+  proxies: *proxy_group_list
+
+dedicated_line_filter: &dedicated_line_filter "(?i)专线|IEPL|IPLC" # 专线筛选与排除
+
+fast_sub_proxy_group_config: &fast_sub_proxy_group_config
+  <<: *use_proxy_providers
+  type: url-test
+  lazy: true
+  url: http://www.gstatic.com/generate_204
+  interval: 300
+  tolerance: 20
+  exclude-filter: *dedicated_line_filter
+
+select_sub_proxy_group_config: &select_sub_proxy_group_config
+  <<: *use_proxy_providers
+  type: select
+  exclude-filter: *dedicated_line_filter
+
+proxy-groups:
+  #分流分组
+  - {name: 🚀 节点选择, <<: *proxy_group_config, proxies: [♻️ 自动选择,⚡ 专线节点,🚀 手动切换1,🚀 手动切换2,🚀 手动切换3,🇭🇰 香港,🇹🇼 台湾,🇯🇵 日本,🇺🇲 美国,🇸🇬 新加坡,🇮🇳 印度,🎯 全球直连]}
+  - {name: ♻️ 自动选择, <<: *fast_sub_proxy_group_config}
+  - {name: ⚡ 专线节点, <<: *select_sub_proxy_group_config, exclude-filter: "", filter: *dedicated_line_filter}
+  - {name: 🚀 手动切换1, <<: *select_sub_proxy_group_config}
+  - {name: 🚀 手动切换2, <<: *select_sub_proxy_group_config}
+  - {name: 🚀 手动切换3, <<: *select_sub_proxy_group_config}
+  - {name: 🤖 OpenAI, <<: *proxy_group_config, proxies: *AI_proxy_group_list}
+  - {name: 🤖 Claude, <<: *proxy_group_config, proxies: *AI_proxy_group_list}
+  - {name: 🤖 BardAI, <<: *proxy_group_config, proxies: *AI_proxy_group_list}
+  - {name: 📺 哔哩哔哩, <<: *proxy_group_config, proxies: [🎯 全球直连,🇭🇰 香港,🇹🇼 台湾,🚀 手动切换1,🚀 手动切换2,🚀 手动切换3,⚡ 专线节点]}
+  - {name: 📺 巴哈姆特, <<: *proxy_group_config, proxies: [🇹🇼 台湾,🇭🇰 香港,DIRECT,🚀 手动切换1,🚀 手动切换2,🚀 手动切换3,⚡ 专线节点]}
+  - {name: 🔍 谷歌服务, <<: *proxy_group_config}
+  - {name: Ⓜ️ 微软服务, <<: *proxy_group_config}
+  - {name: ☁️ OneDrive, <<: *proxy_group_config}
+  - {name: 🎵 Spotify, <<: *proxy_group_config}
+  - {name: 🎼 TikTok, <<: *proxy_group_config}
+  - {name: 📹 YouTube, <<: *proxy_group_config}
+  - {name: 📺 海外IPTV, <<: *proxy_group_config}
+  - {name: 📲 电报消息, <<: *proxy_group_config}
+  - {name: 🎮 Steam, <<: *proxy_group_config}
+  - {name: 🎮 SteamCN, <<: *proxy_group_config, proxies: [🎯 全球直连,🚀 节点选择,♻️ 自动选择,⚡ 专线节点,🚀 手动切换1,🚀 手动切换2,🚀 手动切换3,🇭🇰 香港,🇹🇼 台湾,🇯🇵 日本,🇺🇲 美国,🇸🇬 新加坡,🇮🇳 印度]}
+  - {name: 🇧🇹 BT下载, <<: *fast_sub_proxy_group_config, filter: "(?i)BT|PT|无审计|BuyVM|卢森堡"}
+  - {name: 🇧🇹 BT&PT, <<: *proxy_group_config, proxies: [🎯 全球直连,🇧🇹 BT下载,♻️ 自动选择,⚡ 专线节点,🚀 手动切换1,🚀 手动切换2,🚀 手动切换3,🇭🇰 香港,🇹🇼 台湾,🇯🇵 日本,🇺🇲 美国,🇸🇬 新加坡,🇮🇳 印度]}
+  - {name: 🎯 全球直连, <<: *proxy_group_config, proxies: [DIRECT,REJECT,♻️ 自动选择,⚡ 专线节点,🚀 手动切换1,🚀 手动切换2,🚀 手动切换3]}
+  - {name: 🚫 广告拦截, <<: *proxy_group_config, proxies: [REJECT,DIRECT]}
+  - {name: 🐟 漏网之鱼, <<: *proxy_group_config}
+#分隔,下面是地区分组
+  - {name: 🇭🇰 香港, <<: *fast_sub_proxy_group_config, filter: "(?i)港|🇭🇰|HK|Hong Kong|HongKong"}
+  - {name: 🇹🇼 台湾, <<: *fast_sub_proxy_group_config, filter: "(?i)台|🇹🇼|Taiwan|新北|彰化"}
+  - {name: 🇯🇵 日本, <<: *fast_sub_proxy_group_config, filter: "(?i)日本|🇯🇵|JP|Japan|川日|东京|大阪|泉日|埼玉|沪日|深日|[-]日"}
+  - {name: 🇺🇲 美国, <<: *fast_sub_proxy_group_config, filter: "(?i)美|🇺🇸|us|unitedstates|United States|美|波特兰|达拉斯|俄勒冈|凤凰城|费利蒙|硅谷|拉斯维加斯|洛杉矶|圣何塞|圣克拉拉|西雅图|芝加哥"}
+  - {name: 🇸🇬 新加坡, <<: *fast_sub_proxy_group_config, filter: "(?i)(新|🇸🇬|SG|Singapore|新加坡|坡|狮城)"}
+  - {name: 🇮🇳 印度, <<: *fast_sub_proxy_group_config, filter: "(?i)(🇮🇳|India|印度)"}
+
+ipcidr:       &ipcidr     {type: http,     behavior: ipcidr,    interval: 86400}
+domain:       &domain     {type: http,     behavior: domain,    interval: 86400}
+classical:    &classical  {type: http,     behavior: classical, interval: 86400}
+
+# 分流规则 
+rule-providers:
+  # 直连相关
+  Direct:      {<<: *domain, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/Direct/Direct_No_Resolve.yaml,                      path: ./ruleset/Direct_No_Resolve.yaml       }
+  Lan:         {<<: *classical, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/Lan/Lan_No_Resolve.yaml,                            path: ./ruleset/Lan_No_Resolve.yaml          }
+  ChinaIP:     {<<: *ipcidr, url: https://cdn.jsdelivr.net/gh/soffchen/GeoIP2-CN@release/clash-rule-provider.yml,                                     path: ./ruleset/ChinaIP.yaml      }
+
+  # 下载相关
+  Download:    {<<: *classical, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/Download/Download_No_Resolve.yaml,                  path: ./ruleset/Download_No_Resolve.yaml     }
+  PrivateTracker:   {<<: *classical, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/PrivateTracker/PrivateTracker_No_Resolve.yaml,                path: ./ruleset/PrivateTracker_No_Resolve.yaml    }
+  
+  # DNS相关
+  # BlockHttpDNS:      {<<: *classical, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/BlockHttpDNS/BlockHttpDNS_No_Resolve.yaml,                      path: ./ruleset/BlockHttpDNS_No_Resolve.yaml       }
+  # DNS:      {<<: *classical, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/DNS/DNS_No_Resolve.yaml,                      path: ./ruleset/DNS_No_Resolve.yaml       }
+  
+  # AI相关
+  OpenAI:      {<<: *classical, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/OpenAI/OpenAI_No_Resolve.yaml,                      path: ./ruleset/OpenAi_No_Resolve.yaml       }
+  BardAI:      {<<: *classical, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/BardAI/BardAI_No_Resolve.yaml,                      path: ./ruleset/BardAI_No_Resolve.yaml       }
+  Claude:      {<<: *classical, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/Claude/Claude_No_Resolve.yaml,                      path: ./ruleset/Claude_No_Resolve.yaml       }
+  # 流媒体相关
+  BiliBili:    {<<: *classical, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/BiliBili/BiliBili_No_Resolve.yaml,                  path: ./ruleset/BiliBili_No_Resolve.yaml     }
+  Bahamut:     {<<: *classical, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/Bahamut/Bahamut_No_Resolve.yaml,                    path: ./ruleset/Bahamut_No_Resolve.yaml      } 
+  YouTube:   {<<: *classical, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/YouTube/YouTube_No_Resolve.yaml,                path: ./ruleset/YouTube_No_Resolve.yaml    }
+  TikTok:   {<<: *classical, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/TikTok/TikTok_No_Resolve.yaml,                path: ./ruleset/TikTok_No_Resolve.yaml    }
+  # GlobalMedia: {<<: *classical, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/GlobalMedia/GlobalMedia_Classical_No_Resolve.yaml,  path: ./ruleset/GlobalMedia_No_Resolve.yaml  }
+
+  # 音乐相关
+  Spotify:   {<<: *classical, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/Spotify/Spotify_No_Resolve.yaml,                path: ./ruleset/Spotify_No_Resolve.yaml    }
+
+  #IPTV相关
+  IPTVMainland:   {<<: *classical, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/IPTVMainland/IPTVMainland.yaml,                path: ./ruleset/IPTVMainland.yaml    }
+  IPTVMainland_IP:   {<<: *ipcidr, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/IPTVMainland/IPTVMainland_IP.yaml,                path: ./ruleset/IPTVMainland_IP.yaml    } 
+  IPTVOther:   {<<: *classical, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/IPTVOther/IPTVOther.yaml,                path: ./ruleset/IPTVMainland.yaml    }
+  IPTVOther_Domain:   {<<: *domain, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/IPTVOther/IPTVOther_Domain.yaml,                path: ./ruleset/IPTVOther_Domain.yaml    } 
+
+  # 各大公司产品
+  Microsoft:   {<<: *classical, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/Microsoft/Microsoft_No_Resolve.yaml,                path: ./ruleset/Microsoft_No_Resolve.yaml    }
+  OneDrive:   {<<: *classical, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/OneDrive/OneDrive_No_Resolve.yaml,                path: ./ruleset/OneDrive_No_Resolve.yaml    }
+  Google:      {<<: *classical, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/Google/Google_No_Resolve.yaml,                      path: ./ruleset/Google_No_Resolve.yaml       }
+  Telegram:    {<<: *classical, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/Telegram/Telegram_No_Resolve.yaml,                  path: ./ruleset/Telegram_No_Resolve.yaml     }
+  # Apple:       {<<: *classical, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/Apple/Apple_Classical_No_Resolve.yaml,              path: ./ruleset/Apple_No_Resolve.yaml        }
+  # Github:      {<<: *classical, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/GitHub/GitHub_No_Resolve.yaml,                      path: ./ruleset/Github_No_Resolve.yaml       }
+  # Twitter:     {<<: *classical, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/Twitter/Twitter_No_Resolve.yaml,                    path: ./ruleset/Twitter_No_Resolve.yaml      }
+
+  # 游戏相关
+  SteamCN:   {<<: *classical, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/SteamCN/SteamCN_No_Resolve.yaml,                path: ./ruleset/SteamCN_No_Resolve.yaml    }
+  Steam:   {<<: *classical, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/Steam/Steam_No_Resolve.yaml,                path: ./ruleset/Steam_No_Resolve.yaml    }
+  # Game:        {<<: *classical, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/Game/Game_No_Resolve.yaml,                          path: ./ruleset/Game_No_Resolve.yaml         }
+
+  # 代理相关
+  Proxy:   {<<: *classical, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/Proxy/Proxy_No_Resolve.yaml,                path: ./ruleset/Proxy_No_Resolve.yaml    }
+  Proxy_Domain:   {<<: *domain, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/Proxy/Proxy_Domain.yaml,                path: ./ruleset/Proxy_Domain.yaml    } 
+  # Global:   {<<: *classical, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/Global/Global_No_Resolve.yaml,                path: ./ruleset/Global_No_Resolve.yaml    }
+  # Global_Domain:   {<<: *domain, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/Global/Global_Domain.yaml,                path: ./ruleset/Global_Domain.yaml    }
+  
+
+rules: # 分流Policy 
+  - RULE-SET,Direct,🎯 全球直连
+  - RULE-SET,Lan,🎯 全球直连
+  - RULE-SET,OpenAI,🤖 OpenAI
+  - RULE-SET,BardAI,🤖 BardAI
+  - RULE-SET,Claude,🤖 Claude
+  - RULE-SET,Google,🔍 谷歌服务
+  - RULE-SET,OneDrive,☁️ OneDrive
+  - RULE-SET,Proxy,🚀 节点选择
+  - RULE-SET,Proxy_Domain,🚀 节点选择
+  - RULE-SET,Microsoft,Ⓜ️ 微软服务
+  - RULE-SET,Telegram,📲 电报消息
+  - RULE-SET,BiliBili,📺 哔哩哔哩
+  - RULE-SET,Bahamut,📺 巴哈姆特
+  - RULE-SET,YouTube,📹 YouTube
+  - RULE-SET,SteamCN,🎮 SteamCN
+  - RULE-SET,Steam,🎮 Steam
+  - RULE-SET,Spotify,🎵 Spotify
+  - RULE-SET,TikTok,🎼 TikTok
+  - RULE-SET,PrivateTracker,🇧🇹 BT&PT
+  - RULE-SET,IPTVMainland,🎯 全球直连
+  - RULE-SET,IPTVMainland_IP,🎯 全球直连
+  - RULE-SET,IPTVOther,📺 海外IPTV
+  - RULE-SET,IPTVOther_Domain,📺 海外IPTV
+  - RULE-SET,Download,🎯 全球直连
+  - RULE-SET,ChinaIP,🎯 全球直连
+  - GEOIP,CN,🎯 全球直连
+  - MATCH,🐟 漏网之鱼
