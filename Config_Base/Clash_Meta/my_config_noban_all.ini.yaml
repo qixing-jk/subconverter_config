@@ -293,24 +293,24 @@ rules: # 分流Policy
   - RULE-SET,OpenAI,🤖 OpenAI
   - RULE-SET,BardAI,🤖 BardAI
   - RULE-SET,Claude,🤖 Claude
-  - RULE-SET,Google,🔍 谷歌服务
   - RULE-SET,OneDrive,☁️ OneDrive
-  - RULE-SET,Proxy,🚀 节点选择
-  - RULE-SET,Proxy_Domain,🚀 节点选择
   - RULE-SET,Microsoft,Ⓜ️ 微软服务
   - RULE-SET,Telegram,📲 电报消息
   - RULE-SET,BiliBili,📺 哔哩哔哩
   - RULE-SET,Bahamut,📺 巴哈姆特
   - RULE-SET,YouTube,📹 YouTube
+  - RULE-SET,Google,🔍 谷歌服务
   - RULE-SET,SteamCN,🎮 SteamCN
   - RULE-SET,Steam,🎮 Steam
   - RULE-SET,Spotify,🎵 Spotify
   - RULE-SET,TikTok,🎼 TikTok
   - RULE-SET,PrivateTracker,🇧🇹 BT&PT
-  - RULE-SET,IPTVMainland,🎯 全球直连
-  - RULE-SET,IPTVMainland_IP,🎯 全球直连
   - RULE-SET,IPTVOther,📺 海外IPTV
   - RULE-SET,IPTVOther_Domain,📺 海外IPTV
+  - RULE-SET,Proxy,🚀 节点选择
+  - RULE-SET,Proxy_Domain,🚀 节点选择
+  - RULE-SET,IPTVMainland,🎯 全球直连
+  - RULE-SET,IPTVMainland_IP,🎯 全球直连
   - RULE-SET,Download,🎯 全球直连
   - RULE-SET,ChinaIP,🎯 全球直连
   - GEOIP,CN,🎯 全球直连
