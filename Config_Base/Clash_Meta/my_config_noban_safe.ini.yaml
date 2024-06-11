@@ -10,7 +10,7 @@ proxy-providers-config: &proxy-providers-config
 # url 里填写自己的订阅,名称不能重复，多个机场则在后面加
 proxy-providers:
   Provider1:
-    <<: *proxy-providers-config 
+    <<: *proxy-providers-config
     url: ""
     path: ./proxy_providers/Provider1.yaml
   Provider2:
@@ -67,6 +67,7 @@ tun: # tun 模式
   dns-hijack: # dns 劫持
     - any:53
     - tcp://any:53
+  strict-route: true
   auto-route: true                # 自动设置全局路由
   auto-detect-interface: true     # 自动选择流量出口接口
 
@@ -131,30 +132,12 @@ dns:
     - tls://223.5.5.5   # 阿里
     - system            # append DNS server from system configuration. If not found, it would print an error log and skip.
   #    - dhcp://eh0 # 被判定为非IP dns，无法正确解析
-  proxy-server-nameserver: #代理节点域名解析服务器，仅用于解析代理节点的域名(若查询失败将使用 nameserver，非并发查询)
-    *foreign_dns
   nameserver-policy:
     "geosite:private,cn": *domestic_dns
     "geosite:geolocation-!cn": *foreign_dns
     "geosite:category-ads-all": rcode://success
   nameserver: # 默认 DNS 服务
-    *domestic_dns
-  fallback: # 后备域名解析服务器，一般情况下使用境外 DNS, 保证结果可信
     *foreign_dns
-  #    - 1.2.4.8#🌐 DNS           # HK 中国网络信息中心
-  #    - 210.0.255.251#🌐 DNS     # HK HGC Global
-  #    - 156.154.70.22#🌐 DNS     # 美国 Neustar
-  #    - 156.154.70.25#🌐 DNS     # 美国 Neustar
-  #    - 210.181.4.25           # 韩国梦想
-  #    - 164.124.101.2
-  #    - 203.239.131.1
-  #    - 168.95.192.1
-  #    - 210.80.58.3
-  fallback-filter: # 后备域名解析服务器筛选，满足条件的将使用 fallback结果或只使用 fallback解析
-    geoip: true
-    geoip-code: CN    # 当 nameserver 域名的 IP 查询 geoip 库为 CN 时，不使用 fallback 中的 DNS 查询结果
-    ipcidr:
-      - 240.0.0.0/4
 
 geodata-mode: true
 geox-url:
@@ -233,7 +216,7 @@ proxy-groups:
 domain: &domain     { type: http,     behavior: domain,    interval: 86400 }
 classical: &classical  { type: http,     behavior: classical, interval: 86400 }
 
-# 分流规则 
+# 分流规则
 rule-providers:
   # 直连相关
   Lan: { <<: *classical, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/Lan/Lan_No_Resolve.yaml,                            path: ./ruleset/Lan_No_Resolve.yaml }
@@ -243,18 +226,10 @@ rule-providers:
   Download: { <<: *classical, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/Download/Download_No_Resolve.yaml,                  path: ./ruleset/Download_No_Resolve.yaml }
   PrivateTracker: { <<: *classical, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/PrivateTracker/PrivateTracker_No_Resolve.yaml,                path: ./ruleset/PrivateTracker_No_Resolve.yaml }
 
-  # 去广告相关
-  Anti_ad: { <<: *domain, url: https://anti-ad.net/clash.yaml,                                                                                     path: ./ruleset/anti-ad-clash_No_Resolve.yaml }
-  ZhihuAds: { <<: *classical, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/ZhihuAds/ZhihuAds_No_Resolve.yaml,                      path: ./ruleset/ZhihuAds_No_Resolve.yaml }
-  Advertising_Domain: { <<: *domain, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/Advertising/Advertising_Domain.yaml,                      path: ./ruleset/Advertising_Domain.yaml }
-  Advertising: { <<: *classical, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/Advertising/Advertising_No_Resolve.yaml,                      path: ./ruleset/Advertising_No_Resolve.yaml }
-  #直连指不应该被去广告分流规则屏蔽的域名、IP等
-  Direct: { <<: *domain, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/Direct/Direct_No_Resolve.yaml,                      path: ./ruleset/Direct_No_Resolve.yaml }
-
   # DNS相关
   # BlockHttpDNS:      {<<: *classical, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/BlockHttpDNS/BlockHttpDNS_No_Resolve.yaml,                      path: ./ruleset/BlockHttpDNS_No_Resolve.yaml       }
   # DNS:      {<<: *classical, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/DNS/DNS_No_Resolve.yaml,                      path: ./ruleset/DNS_No_Resolve.yaml       }
-  
+
   # AI相关
   OpenAI: { <<: *classical, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/OpenAI/OpenAI_No_Resolve.yaml,                      path: ./ruleset/OpenAi_No_Resolve.yaml }
   Gemini: { <<: *classical, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/Gemini/Gemini_No_Resolve.yaml,                      path: ./ruleset/Gemini_No_Resolve.yaml }
@@ -297,13 +272,8 @@ rule-providers:
   # Global_Domain:   {<<: *domain, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/Global/Global_Domain.yaml,                path: ./ruleset/Global_Domain.yaml    }
 
 
-rules: # 分流Policy 
-  - RULE-SET,Direct,🎯 全球直连
+rules: # 分流Policy
   - RULE-SET,Lan,🎯 全球直连
-  - RULE-SET,Anti_ad,🚫 广告拦截
-  - RULE-SET,Advertising_Domain,🚫 广告拦截
-  - RULE-SET,Advertising,🚫 广告拦截
-  - RULE-SET,ZhihuAds,🚫 广告拦截
   - RULE-SET,OpenAI,🤖 OpenAI
   - RULE-SET,Gemini,🤖 Gemini
   - RULE-SET,Claude,🤖 Claude
