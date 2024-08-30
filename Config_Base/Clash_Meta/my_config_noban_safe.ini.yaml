@@ -1,16 +1,17 @@
 # 代理组和代理组提供者相关
 proxy-providers-config: &proxy-providers-config
   type: http
-  interval: 3600
+  interval: 86400
   health-check:
     enable: true
     url: https://www.gstatic.com/generate_204
     interval: 300
+    timeout: 3000
 
 # url 里填写自己的订阅,名称不能重复，多个机场则在后面加
 proxy-providers:
   Provider1:
-    <<: *proxy-providers-config
+    <<: *proxy-providers-config 
     url: ""
     path: ./proxy_providers/Provider1.yaml
   Provider2:
@@ -19,9 +20,10 @@ proxy-providers:
     path: ./proxy_providers/Provider2.yaml
 
 use_proxy_providers: &use_proxy_providers
-  use:    # 添加机场后要user下也添加
-  - Provider1
-  - Provider2
+  url: http://www.gstatic.com/generate_204
+  interval: 300
+  max-failed-times: 3
+  include-all-providers: true
 
 port: 10802             # HTTP 代理端口
 socks-port: 10803       # Socks 端口
@@ -91,42 +93,170 @@ domestic_dns: &domestic_dns
   - dhcp://system
 
 foreign_dns: &foreign_dns
-  # Google 备用
+  # Google
   - https://dns.google/dns-query#🌐 DNS
-  - tls://8.8.4.4#🌐 DNS
-#  - tls://8.8.8.8#🚀 节点选择
+  - https://8.8.8.8/dns-query#🌐 DNS
   # Cloudflare
-  - https://dns.cloudflare.com/dns-query#🌐 DNS
-  - tls://1.0.0.1#🌐 DNS
+  - https://dns.cloudflare.com/dns-query#DIRECT
+  - https://1.1.1.1/dns-query#DIRECT
   # OpenDNS
   - https://doh.opendns.com/dns-query#🌐 DNS
-  - tls://208.67.222.222#🌐 DNS
-  - tls://208.67.220.220#🌐 DNS
-  - tls://101.101.101.101#🌐 DNS   #Quad 101
-  - tls://185.222.222.222#🌐 DNS   #DNS.SB
-
+  - https://208.67.222.222/dns-query#DIRECT
+  - https://208.67.220.220/dns-query#DIRECT
+  #Quad 101
+  - https://101.101.101.101/dns-query#DIRECT
 dns:
   enable: true       # 不使用系统 DNS
-  prefer-h3: true    # 开启 DOH 的 http/3
+  prefer-h3: true   # 开启 DOH 的 http/3
   ipv6: false        # 关闭 IPV6
   listen: 0.0.0.0:53 # dns 监听
-  use-hosts: true
+  use-hosts: true   #是否回应配置中的 hosts，默认 true
+  use-system-hosts: true    #是否查询系统 hosts，默认 true
+  respect-rules: false  #dns 连接是否跟随 rules
   enhanced-mode: fake-ip
   fake-ip-range: 198.18.0.1/16
   fake-ip-filter: # 以下地址不会下发 fakeip 映射用于连接
+    # 以下域名列表参考自 https://github.com/XinSSS/AdditionalRuleList/blob/main/base/clash_base.yaml
+    # https://github.com/Hackl0us/SS-Rule-Snippet/blob/master/LAZY_RULES/clash.yaml
+    # https://github.com/vernesong/OpenClash/blob/dev/luci-app-openclash/root/etc/openclash/custom/openclash_custom_fake_filter.list
+    #LAN
     - "*.lan"
-    - localhost.ptlogin2.qq.com
-    - "+.srv.nintendo.net"
-    - "+.stun.playstation.net"
-    - "+.msftconnecttest.com"
-    - "+.msftncsi.com"
-    - "+.xboxlive.com"
+    - "*.localdomain"
+    - "*.example"
+    - "*.invalid"
+    - "*.localhost"
+    - "*.test"
+    - "*.local"
+    - "*.home.arpa"
+    #放行NTP服务
+    - time.*.com
+    - time.*.gov
+    - time.*.edu.cn
+    - time.*.apple.com
+    - time1.*.com
+    - time2.*.com
+    - time3.*.com
+    - time4.*.com
+    - time5.*.com
+    - time6.*.com
+    - time7.*.com
+    - ntp.*.com
+    - ntp1.*.com
+    - ntp2.*.com
+    - ntp3.*.com
+    - ntp4.*.com
+    - ntp5.*.com
+    - ntp6.*.com
+    - ntp7.*.com
+    - "*.time.edu.cn"
+    - "*.ntp.org.cn"
+    - +.pool.ntp.org
+    - time1.cloud.tencent.com
+    #放行网易云音乐
+    - music.163.com
+    - "*.music.163.com"
+    - "*.126.net"
+    #百度音乐
+    - musicapi.taihe.com
+    - music.taihe.com
+    #酷狗音乐
+    - songsearch.kugou.com
+    - trackercdn.kugou.com
+    #酷我音乐
+    - "*.kuwo.cn"
+    #JOOX音乐
+    - api-jooxtt.sanook.com
+    - api.joox.com
+    - joox.com
+    #QQ音乐
+    - y.qq.com
+    - "*.y.qq.com"
+    - streamoc.music.tc.qq.com
+    - mobileoc.music.tc.qq.com
+    - isure.stream.qqmusic.qq.com
+    - dl.stream.qqmusic.qq.com
+    - aqqmusic.tc.qq.com
+    - amobile.music.tc.qq.com
+    #虾米音乐
+    - "*.xiami.com"
+    #咪咕音乐
+    - "*.music.migu.cn"
+    - music.migu.cn
+    #win10本地连接检测
+    - +.msftconnecttest.com
+    - +.msftncsi.com
     - msftconnecttest.com
+    - msftncsi.com
+    #QQ快捷登录
+    - localhost.ptlogin2.qq.com
+    - localhost.sec.qq.com
+    #Game
+    #Nintendo Switch
+    - +.srv.nintendo.net
+    - "*.n.n.srv.nintendo.net"
+    #Sony PlayStation
+    - +.stun.playstation.net
+    #Microsoft Xbox
+    - xbox.*.*.microsoft.com
+    - "*.*.xboxlive.com"
     - xbox.*.microsoft.com
-    - "*.battlenet.com.cn"
-    - "*.battlenet.com"
-    - "*.blzstatic.cn"
-    - "*.battle.net"
+    - xnotify.xboxlive.com
+    #Wotgame
+    - +.battlenet.com.cn
+    - +.wotgame.cn
+    - +.wggames.cn
+    - +.wowsgame.cn
+    - +.wargaming.net
+    #Golang
+    - proxy.golang.org
+    #STUN
+    - stun.*.*
+    - stun.*.*.*
+    - +.stun.*.*
+    - +.stun.*.*.*
+    - +.stun.*.*.*.*
+    - +.stun.*.*.*.*.*
+    #Linksys Router
+    - heartbeat.belkin.com
+    - "*.linksys.com"
+    - "*.linksyssmartwifi.com"
+    #ASUS Router
+    - "*.router.asus.com"
+    #Apple Software Update Service
+    - mesu.apple.com
+    - swscan.apple.com
+    - swquery.apple.com
+    - swdownload.apple.com
+    - swcdn.apple.com
+    - swdist.apple.com
+    #Google
+    - lens.l.google.com
+    - stun.l.google.com
+    #Netflix
+    - +.nflxvideo.net
+    #FinalFantasy XIV Worldwide Server & CN Server
+    - "*.square-enix.com"
+    - "*.finalfantasyxiv.com"
+    - "*.ffxiv.com"
+    - "*.ff14.sdo.com"
+    - ff.dorado.sdo.com
+    #Bilibili
+    - "*.mcdn.bilivideo.cn"
+    #Disney Plus
+    - +.media.dssott.com
+    - +.shark007.net
+    - shaoxs.top
+    - +.termux.org
+    - +.haoduopan.cn
+    - +.cmbchina.com
+    - +.cmbimg.com
+    - local.adguard.org
+    - +.uu.163.com
+    - ps.res.netease.com
+    - +.mp.microsoft.com
+    - c1.microsoft.com
+    - +.s-microsoft.com
+    - storeedgefd.dsx.mp.microsoft.com
   default-nameserver: #用于解析 DNS 服务器 的域名(必须为 ip, 可为加密 dns)
     - tls://1.12.12.12  # Tencent
     - tls://223.5.5.5   # 阿里
@@ -134,7 +264,6 @@ dns:
   #    - dhcp://eh0 # 被判定为非IP dns，无法正确解析
   nameserver-policy:
     "geosite:private,cn": *domestic_dns
-    "geosite:geolocation-!cn": *foreign_dns
     "geosite:category-ads-all": rcode://success
   nameserver: # 默认 DNS 服务
     *foreign_dns
@@ -145,26 +274,28 @@ geox-url:
   geosite: "https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/geosite.dat"
   mmdb: "https://fastly.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/country.mmdb"
 
-proxy_group_list: &proxy_group_list [ 🚀 节点选择,♻️ 自动选择,⚡ 专线节点,🚀 手动切换1,🚀 手动切换2,🚀 手动切换3,🇭🇰 香港,🇹🇼 台湾,🇯🇵 日本,🇺🇲 美国,🇸🇬 新加坡,🇮🇳 印度,⚖️ 散列-负载均衡,⚖️ 轮询-负载均衡,🎯 全球直连 ]
+proxy_group_list: &proxy_group_list [ 🚀 节点选择,♻️ 自动选择,⚡ 专线节点,🚀 手动切换1,🚀 手动切换2,🚀 手动切换3,🇭🇰 香港,🇹🇼 台湾,🇯🇵 日本,🇺🇲 美国,🇸🇬 新加坡,🇮🇳 印度,🇰🇷 韩国,⚖️ 散列-负载均衡,⚖️ 轮询-负载均衡,🎯 全球直连 ]
 
-AI_proxy_group_list: &AI_proxy_group_list [ 🇺🇲 美国,🚀 手动切换1,🚀 手动切换2,🚀 手动切换3,🚀 节点选择,♻️ 自动选择,⚡ 专线节点,🇭🇰 香港,🇹🇼 台湾,🇯🇵 日本,🇸🇬 新加坡,🇮🇳 印度,⚖️ 散列-负载均衡,⚖️ 轮询-负载均衡 ]
+AI_proxy_group_list: &AI_proxy_group_list [ 🇺🇲 美国,🚀 手动切换1,🚀 手动切换2,🚀 手动切换3,🚀 节点选择,♻️ 自动选择,⚡ 专线节点,🇭🇰 香港,🇹🇼 台湾,🇯🇵 日本,🇸🇬 新加坡,🇮🇳 印度,🇰🇷 韩国,⚖️ 散列-负载均衡,⚖️ 轮询-负载均衡 ]
 
-direct_first_group_list: &direct_first_group_list [ 🎯 全球直连,🚀 节点选择,♻️ 自动选择,⚡ 专线节点,🚀 手动切换1,🚀 手动切换2,🚀 手动切换3,🇭🇰 香港,🇹🇼 台湾,🇯🇵 日本,🇺🇲 美国,🇸🇬 新加坡,🇮🇳 印度,⚖️ 散列-负载均衡,⚖️ 轮询-负载均衡 ]
+fast_first_group_list: &fast_first_group_list [ ♻️ 自动选择,🚀 节点选择,⚡ 专线节点,🚀 手动切换1,🚀 手动切换2,🚀 手动切换3,🇭🇰 香港,🇹🇼 台湾,🇯🇵 日本,🇺🇲 美国,🇸🇬 新加坡,🇮🇳 印度,🇰🇷 韩国,⚖️ 散列-负载均衡,⚖️ 轮询-负载均衡,🎯 全球直连 ]
+
+direct_first_group_list: &direct_first_group_list [ 🎯 全球直连,🚀 节点选择,♻️ 自动选择,⚡ 专线节点,🚀 手动切换1,🚀 手动切换2,🚀 手动切换3,🇭🇰 香港,🇹🇼 台湾,🇯🇵 日本,🇺🇲 美国,🇸🇬 新加坡,🇮🇳 印度,🇰🇷 韩国,⚖️ 散列-负载均衡,⚖️ 轮询-负载均衡 ]
+
+balance_first_group_list: &balance_first_group_list [ ⚖️ 散列-负载均衡,♻️ 自动选择,⚡ 专线节点,🚀 手动切换1,🚀 手动切换2,🚀 手动切换3,🇭🇰 香港,🇹🇼 台湾,🇯🇵 日本,🇺🇲 美国,🇸🇬 新加坡,🇮🇳 印度,🇰🇷 韩国,⚖️ 轮询-负载均衡,🎯 全球直连 ]
 
 proxy_group_config: &proxy_group_config   # proxy 相关
   type: select
   proxies: *proxy_group_list
 
-dedicated_line_filter: &dedicated_line_filter "(?i)专线|IEPL|IPLC|游戏" # 专线筛选与排除
+dedicated_line_filter: &dedicated_line_filter "(?i)专线|IEPL|IPLC|游戏|🎮" # 专线筛选与排除
 
 fast_sub_proxy_group_config: &fast_sub_proxy_group_config
   <<: *use_proxy_providers
   type: url-test
 #  lazy: true
-  url: http://www.gstatic.com/generate_204
-  interval: 300
-  tolerance: 20
-  exclude-filter: "(?i)专线|IEPL|IPLC|游戏|专用"
+  tolerance: 10
+  exclude-filter: "(?i)专线|IEPL|IPLC|游戏|🎮|FREE"
 
 select_sub_proxy_group_config: &select_sub_proxy_group_config
   <<: *use_proxy_providers
@@ -173,7 +304,7 @@ select_sub_proxy_group_config: &select_sub_proxy_group_config
 
 proxy-groups:
   #分流分组
-  - { name: 🚀 节点选择, <<: *proxy_group_config, proxies: [ ♻️ 自动选择,⚡ 专线节点,🚀 手动切换1,🚀 手动切换2,🚀 手动切换3,🇭🇰 香港,🇹🇼 台湾,🇯🇵 日本,🇺🇲 美国,🇸🇬 新加坡,🇮🇳 印度,⚖️ 散列-负载均衡,⚖️ 轮询-负载均衡,🎯 全球直连 ], icon: https://clash-verge-rev.github.io/assets/icons/adjust.svg}
+  - { name: 🚀 节点选择, <<: *proxy_group_config, proxies: *balance_first_group_list, icon: https://clash-verge-rev.github.io/assets/icons/adjust.svg}
   - { name: ♻️ 自动选择, <<: *fast_sub_proxy_group_config, icon: https://fastly.jsdelivr.net/gh/shindgewongxj/WHATSINStash@master/icon/urltest.png }
   - { name: ⚡ 专线节点, <<: *select_sub_proxy_group_config, exclude-filter: "", filter: *dedicated_line_filter, icon: https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Auto.png }
   - { name: 🚀 手动切换1, <<: *select_sub_proxy_group_config, icon: https://fastly.jsdelivr.net/gh/shindgewongxj/WHATSINStash@master/icon/select.png }
@@ -182,28 +313,29 @@ proxy-groups:
   - { name: 🤖 OpenAI, <<: *proxy_group_config, proxies: *AI_proxy_group_list ,icon: https://api.faviconkit.com/openai.com}
   - { name: 🤖 Claude, <<: *proxy_group_config, proxies: *AI_proxy_group_list ,icon: https://f1.allesedv.com/claude.ai}
   - { name: 🤖 Gemini, <<: *proxy_group_config, proxies: *AI_proxy_group_list ,icon: https://api.faviconkit.com/gemini.google.com}
-  - { name: 📺 哔哩哔哩, <<: *proxy_group_config, proxies: [ 🎯 全球直连,🇭🇰 香港,🇹🇼 台湾,🚀 手动切换1,🚀 手动切换2,🚀 手动切换3,⚡ 专线节点 ] ,icon: https://api.faviconkit.com/bilibili.com}
-  - { name: 📺 巴哈姆特, <<: *proxy_group_config, proxies: [ 🇹🇼 台湾,🇭🇰 香港,DIRECT,🚀 手动切换1,🚀 手动切换2,🚀 手动切换3,⚡ 专线节点 ] ,icon: https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Bahamut.png}
+  - { name: 🤖 CiCi & Coze, <<: *proxy_group_config, proxies: *AI_proxy_group_list ,icon: https://api.faviconkit.com/ciciai.com}
+  - { name: 🤖 其他AI, <<: *proxy_group_config, proxies: *AI_proxy_group_list ,icon: https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Magic.png}
   - { name: 🔍 谷歌服务, <<: *proxy_group_config, icon: https://api.faviconkit.com/google.com }
   - { name: Ⓜ️ 微软服务, <<: *proxy_group_config, icon: https://api.faviconkit.com/microsoft.com }
   - { name: ☁️ OneDrive, <<: *proxy_group_config, icon: https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/OneDrive.png }
-  - { name: 🎵 Spotify, <<: *proxy_group_config, icon: https://api.faviconkit.com/spotify.com }
   - { name: 🎼 TikTok, <<: *proxy_group_config ,icon: https://api.faviconkit.com/tiktok.com}
+  - { name: 🎵 Spotify, <<: *proxy_group_config, icon: https://api.faviconkit.com/spotify.com }
   - { name: 📹 YouTube, <<: *proxy_group_config ,icon: https://api.faviconkit.com/youtube.com}
   - { name: 📲 电报消息, <<: *proxy_group_config ,icon: https://api.faviconkit.com/telegram.org}
-  - { name: 🎮 Steam, <<: *proxy_group_config ,icon: https://api.faviconkit.com/steampowered.com}
-  - { name: 🎮 SteamCN, <<: *proxy_group_config, proxies: *direct_first_group_list ,icon: https://api.faviconkit.com/steampowered.com}
+  - { name: 📺 哔哩哔哩, <<: *proxy_group_config, proxies: [ 🎯 全球直连,🇭🇰 香港,🇹🇼 台湾,🚀 手动切换1,🚀 手动切换2,🚀 手动切换3,⚡ 专线节点 ] ,icon: https://api.faviconkit.com/bilibili.com}
+  - { name: 📺 巴哈姆特, <<: *proxy_group_config, proxies: [ 🇹🇼 台湾,🇭🇰 香港,DIRECT,🚀 手动切换1,🚀 手动切换2,🚀 手动切换3,⚡ 专线节点 ] ,icon: https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Bahamut.png}
+  - { name: 🎮 游戏平台, <<: *proxy_group_config ,icon: https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Game.png}
   - { name: 🎮 UDP节点, <<: *proxy_group_config, proxies: [ ⚡ 专线节点,🚀 手动切换1,🚀 手动切换2,🚀 手动切换3,🎯 全球直连 ] ,icon: https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Game.png}
   - { name: 📺 海外IPTV, <<: *proxy_group_config, icon: "data:image/svg+xml;base64,PHN2ZyB0PSIxNzE4MDk2NjQxODM2IiBjbGFzcz0iaWNvbiIgdmlld0JveD0iMCAwIDEwMjQgMTAyNCIgdmVyc2lvbj0iMS4xIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHAtaWQ9IjE2NzkiIHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIj48cGF0aCBkPSJNODA3Ljk2MTYgODk1LjY2NzJjMTUuMzA4OCA0LjQwMzIgMjQuNjAxNiAyMS4xNDU2IDIwLjkxNTIgMzcuNzg1Ni0zLjY4NjQgMTYuNjE0NC0xOC45Njk2IDI3LjA1OTItMzQuNTA4OCAyMy41MjY0YTExNjYuNDEyOCAxMTY2LjQxMjggMCAwIDAtMjgwLjE2NjQtMjguNTY5NiAxMTU0LjA0OCAxMTU0LjA0OCAwIDAgMC0yODQuNDE2IDMxLjMzNDQgMjQuNzU1MiAyNC43NTUyIDAgMCAxLTcuMTE2OCAwYy0xNC41OTItMC4yODE2LTI2Ljc3NzYtMTIuMTM0NC0yOC41NDQtMjcuNzI0OC0xLjcxNTItMTUuNjE2IDcuNTAwOC0zMC4yMzM2IDIxLjYwNjQtMzQuMjI3MmExMjA3LjA0IDEyMDcuMDQgMCAwIDEgMjk4LjQ3MDQtMzMuMDc1MmM5OC44MTYtMS41MzYgMTk3LjUwNCA4Ljg1NzYgMjkzLjc2IDMwLjk3NnogbS0yOTYuMDM4NC0xMjEuMTM5MmM5LjY1MTIgMCAxNy42Mzg0IDcuNzMxMiAxOC44NjcyIDE3Ljc0MDhsMC4xNzkyIDIuODE2djM5LjY4YzAgMTEuMzE1Mi04LjUyNDggMjAuNTMxMi0xOS4wNDY0IDIwLjUzMTItOS42NzY4IDAtMTcuNjY0LTcuNzMxMi0xOC44OTI4LTE3Ljc0MDhsLTAuMTc5Mi0yLjgxNnYtMzkuNjhjMC0xMS4zMTUyIDguNTUwNC0yMC41MzEyIDE5LjA3Mi0yMC41MzEyek02Mi4zODcyIDY0YzE0OS4yNDggMTcuOTIgMjk5LjM0MDggMjYuNjQ5NiA0NDkuNTM2IDI2LjExMiAxMzcuNzI4IDAuNTEyIDI3NS4zNTM2LTYuNzU4NCA0MTIuMzM5Mi0yMS44MzY4bDM3LjM3Ni00LjI3NTJoMTIuNTk1MmMyNi4wNjA4IDAuMDc2OCA0Ny40MzY4IDIxLjcwODggNDkuNTg3MiA0OS4yMjg4bDAuMTc5MiA0LjQwMzJWNzI0LjIyNGMtMC4xNzkyIDI4LjAwNjQtMjAuMTk4NCA1MC45Njk2LTQ1LjcyMTYgNTMuMjQ4bC00LjA0NDggMC4xNzkyaC0xLjE1MmEzNjM2LjM1MiAzNjM2LjM1MiAwIDAgMC00NjEuMTU4NC0yNy44MjcyIDM2MzAuNTQwOCAzNjMwLjU0MDggMCAwIDAtNDIyLjkxMiAyMy4yOTZsLTM4LjI3MiA0LjUzMTJoLTAuOTcyOGMtMjYuMTEyIDAtNDcuNTEzNi0yMS42MzItNDkuNTg3Mi00OS4xNzc2TDAgNzI0LjA3MDRWMTE3LjYwNjRjMC0yOC4xMzQ0IDIwLjEyMTYtNTEuMTc0NCA0NS42NzA0LTUzLjQwMTZsNC4wOTYtMC4yMDQ4aDEyLjYyMDh6IG0xMzMuMzc2IDIyNEgxNDIuMjU5MnYyNzkuOTg3Mmg1My41NTUyVjI4OHogbTEzNy43NzkyIDBIMjUwLjAzNTJ2Mjc5Ljk4NzJoNTMuNTU1MnYtODYuMzQ4OGgyOS45NTJjMTcuMTUyIDAgMzEuODIwOC0xLjY2NCA0NC4wMzItNS4wNDMyIDEyLjIzNjgtMy4zMjggMjIuMTk1Mi04Ljk2IDI5Ljk1Mi0xNi43NDI0IDcuNzU2OC03Ljc4MjQgMTMuMzg4OC0xNy45MiAxNi45MjE2LTMwLjQ2NCAzLjUzMjgtMTIuNDY3MiA1LjI5OTItMjcuODc4NCA1LjI5OTItNDYuMTgyNCAwLTE2Ljk0NzItMS42MTI4LTMxLjM2LTQuNzg3Mi00My4zNDA4LTMuMTQ4OC0xMi4wMDY0LTguNDQ4LTIxLjgxMTItMTUuODQ2NC0yOS40NjU2LTcuMzk4NC03LjY4LTE3LjI1NDQtMTMuMzEyLTI5LjU2OC0xNi45NDcyLTEwLjU5ODQtMy4xMjMyLTIzLjM3MjgtNC44ODk2LTM4LjMyMzItNS4zNTA0bC03LjY4LTAuMTAyNHogbTMwMC41NDQgMEg0NTIuNjA4djUzLjY1NzZoNjQuMTUzNnYyMjYuMzI5Nmg1My4xNzEydi0yMjYuMzI5Nmg2NC4xNTM2VjI4OHogbTcwLjExODQgMGgtNTkuMTg3Mmw4NC4xNzI4IDI3OS45ODcyaDY2LjYzNjhsODUuOTM5Mi0yNzkuOTg3Mkg4MjYuMTEybC02MC45NTM2IDIxNC42NTZoLTIuMDk5MmwtNTguODgtMjE0LjY1NnogbS0zNzcuNzI4IDQ4LjQzNTJjOC45NiAwIDE2LjUxMiAwLjc2OCAyMi43ODQgMi40MDY0IDYuMTY5NiAxLjYxMjggMTEuMjY0IDQuMzAwOCAxNS4xMDQgOC4wNjQgMy44NjU2IDMuNzYzMiA2LjY1NiA4LjcyOTYgOC4yOTQ0IDE0LjkyNDggMS42Mzg0IDYuMTQ0IDIuNDU3NiAxMy43MjE2IDIuNDU3NiAyMi42MDQ4IDAgOS4zOTUyLTAuODQ0OCAxNy4xNTItMi40NTc2IDIzLjE2OGEzMS41NjQ4IDMxLjU2NDggMCAwIDEtOC4yOTQ0IDE0Ljc0NTZjLTQuMTcyOCAzLjkxNjgtOS4zNDQgNi42NTYtMTQuOTc2IDcuODU5MmE5OS4zMjggOTkuMzI4IDAgMCAxLTIyLjkxMiAyLjI1MjhoLTIyLjg4NjRWMzM2LjM4NGgyMi44ODY0djAuMDI1NnoiIGZpbGw9IiM0QzlGRDkiIHAtaWQ9IjE2ODAiPjwvcGF0aD48L3N2Zz4=" }
   - { name: 🦉 多邻国, <<: *proxy_group_config ,icon: https://api.faviconkit.com/duolingo.com}
   - { name: 📤 BT下载, <<: *fast_sub_proxy_group_config, filter: "(?i)((?<=^|[^a-zA-Z0-9])(bt|pt)(?=$|[^a-zA-Z0-9]))|无审计|BuyVM|卢森堡", icon: "data:image/svg+xml;base64,PHN2ZyB0PSIxNzE4MDk2ODQ1MjI2IiBjbGFzcz0iaWNvbiIgdmlld0JveD0iMCAwIDEwMjQgMTAyNCIgdmVyc2lvbj0iMS4xIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHAtaWQ9IjM3NDciIHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIj48cGF0aCBkPSJNMTAyMC4xNjk1NzYgNTEwLjcyMzE5MmMwLTI4MC44OTc3NTYtMjI3LjI3MTgyLTUxMC43MjMxOTItNTEwLjcyMzE5Mi01MTAuNzIzMTkyQzIyOC41NDg2MjggMCAxLjI3NjgwOCAyMjcuMjcxODIgMS4yNzY4MDggNTEwLjcyMzE5MmMwIDIxNy4wNTczNTcgMTM1LjM0MTY0NiA0MDAuOTE3NzA2IDMyNi44NjI4NDMgNDc0Ljk3MjU2OUwyMzEuMTAyMjQ0IDUzOC44MTI5NjhsLTI4LjA4OTc3NS0xMjcuNjgwNzk4LTQ1Ljk2NTA4Ny0yMjIuMTY0NTg5IDE4Ni40MTM5NjUtNDAuODU3ODU1IDY4Ljk0NzYzMSAzMjEuNzU1NjExYzE3Ljg3NTMxMiA4Ni44MjI5NDMgNTguNzMzMTY3IDEzMi43ODgwMyAxMjIuNTczNTY2IDEyMC4wMTk5NSA1MS4wNzIzMTktMTAuMjE0NDY0IDc0LjA1NDg2My01My42MjU5MzUgNzkuMTYyMDk0LTg0LjI2OTMyNyAyLjU1MzYxNi0xMi43NjgwOCAwLTI4LjA4OTc3Ni0yLjU1MzYxNi00MC44NTc4NTVsLTc2LjYwODQ3OC0zNTQuOTUyNjE5IDE4Ni40MTM5NjUtNDAuODU3ODU1IDg2LjgyMjk0MiA0MDYuMDI0OTM4Qzg0My45NzAwNzUgNjM4LjQwMzk5IDkzOC40NTM4NjUgNjYzLjk0MDE1IDkzOC40NTM4NjUgNjYzLjk0MDE1bC0xODEuMzA2NzMzIDM4LjMwNDIzOWMtNTMuNjI1OTM1IDEyLjc2ODA4LTg5LjM3NjU1OS04NC4yNjkzMjctODkuMzc2NTU4LTg0LjI2OTMyN0g2NjUuMjE2OTU4Yy0xNS4zMjE2OTYgNDAuODU3ODU1LTMzLjE5NzAwNyAxMDkuODA1NDg2LTE2NS45ODUwMzggMTM3Ljg5NTI2Mi0xMC4yMTQ0NjQgMi41NTM2MTYtMTcuODc1MzEyIDIuNTUzNjE2LTI4LjA4OTc3NSA1LjEwNzIzMmw1Ni4xNzk1NTEgMjYzLjAyMjQ0NGMyNzMuMjM2OTA4LTEyLjc2ODA4IDQ5Mi44NDc4OC0yMzcuNDg2Mjg0IDQ5Mi44NDc4OC01MTMuMjc2ODA4eiIgZmlsbD0iIzhGQzI2NSIgcC1pZD0iMzc0OCI+PC9wYXRoPjwvc3ZnPg==" }
-  - { name: 📤 BT&PT, <<: *proxy_group_config, proxies: [ 🎯 全球直连,📤 BT下载,♻️ 自动选择,⚡ 专线节点,🚀 手动切换1,🚀 手动切换2,🚀 手动切换3,🇭🇰 香港,🇹🇼 台湾,🇯🇵 日本,🇺🇲 美国,🇸🇬 新加坡,🇮🇳 印度,⚖️ 散列-负载均衡,⚖️ 轮询-负载均衡 ], icon: "data:image/svg+xml;base64,PHN2ZyB0PSIxNzE4MDk2ODQ1MjI2IiBjbGFzcz0iaWNvbiIgdmlld0JveD0iMCAwIDEwMjQgMTAyNCIgdmVyc2lvbj0iMS4xIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHAtaWQ9IjM3NDciIHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIj48cGF0aCBkPSJNMTAyMC4xNjk1NzYgNTEwLjcyMzE5MmMwLTI4MC44OTc3NTYtMjI3LjI3MTgyLTUxMC43MjMxOTItNTEwLjcyMzE5Mi01MTAuNzIzMTkyQzIyOC41NDg2MjggMCAxLjI3NjgwOCAyMjcuMjcxODIgMS4yNzY4MDggNTEwLjcyMzE5MmMwIDIxNy4wNTczNTcgMTM1LjM0MTY0NiA0MDAuOTE3NzA2IDMyNi44NjI4NDMgNDc0Ljk3MjU2OUwyMzEuMTAyMjQ0IDUzOC44MTI5NjhsLTI4LjA4OTc3NS0xMjcuNjgwNzk4LTQ1Ljk2NTA4Ny0yMjIuMTY0NTg5IDE4Ni40MTM5NjUtNDAuODU3ODU1IDY4Ljk0NzYzMSAzMjEuNzU1NjExYzE3Ljg3NTMxMiA4Ni44MjI5NDMgNTguNzMzMTY3IDEzMi43ODgwMyAxMjIuNTczNTY2IDEyMC4wMTk5NSA1MS4wNzIzMTktMTAuMjE0NDY0IDc0LjA1NDg2My01My42MjU5MzUgNzkuMTYyMDk0LTg0LjI2OTMyNyAyLjU1MzYxNi0xMi43NjgwOCAwLTI4LjA4OTc3Ni0yLjU1MzYxNi00MC44NTc4NTVsLTc2LjYwODQ3OC0zNTQuOTUyNjE5IDE4Ni40MTM5NjUtNDAuODU3ODU1IDg2LjgyMjk0MiA0MDYuMDI0OTM4Qzg0My45NzAwNzUgNjM4LjQwMzk5IDkzOC40NTM4NjUgNjYzLjk0MDE1IDkzOC40NTM4NjUgNjYzLjk0MDE1bC0xODEuMzA2NzMzIDM4LjMwNDIzOWMtNTMuNjI1OTM1IDEyLjc2ODA4LTg5LjM3NjU1OS04NC4yNjkzMjctODkuMzc2NTU4LTg0LjI2OTMyN0g2NjUuMjE2OTU4Yy0xNS4zMjE2OTYgNDAuODU3ODU1LTMzLjE5NzAwNyAxMDkuODA1NDg2LTE2NS45ODUwMzggMTM3Ljg5NTI2Mi0xMC4yMTQ0NjQgMi41NTM2MTYtMTcuODc1MzEyIDIuNTUzNjE2LTI4LjA4OTc3NSA1LjEwNzIzMmw1Ni4xNzk1NTEgMjYzLjAyMjQ0NGMyNzMuMjM2OTA4LTEyLjc2ODA4IDQ5Mi44NDc4OC0yMzcuNDg2Mjg0IDQ5Mi44NDc4OC01MTMuMjc2ODA4eiIgZmlsbD0iIzhGQzI2NSIgcC1pZD0iMzc0OCI+PC9wYXRoPjwvc3ZnPg==" }
-  - { name: 🌐 DNS, <<: *proxy_group_config, proxies: *direct_first_group_list, icon: "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBzdGFuZGFsb25lPSJubyI/PjwhRE9DVFlQRSBzdmcgUFVCTElDICItLy9XM0MvL0RURCBTVkcgMS4xLy9FTiIgImh0dHA6Ly93d3cudzMub3JnL0dyYXBoaWNzL1NWRy8xLjEvRFREL3N2ZzExLmR0ZCI+PHN2ZyB0PSIxNzE4MDk3MDQ5NTc1IiBjbGFzcz0iaWNvbiIgdmlld0JveD0iMCAwIDEwMjQgMTAyNCIgdmVyc2lvbj0iMS4xIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHAtaWQ9IjQ3OTYiIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCI+PHBhdGggZD0iTTU3MS45MDQgNjgyLjQ5Nmg1Ny4zNDRWMzg4LjA5NmgtNTkuOTA0djE4My4yOTZMNDUyLjA5NiAzOTAuMTQ0di0yLjA0OEgzOTIuNzA0djI5NC40aDU5LjkwNFY0OTcuMTUybDExNy4yNDggMTgzLjI5NnYyLjA0OGgyLjA0OHpNMjAwLjcwNCAzMjBjMzQuMzA0LTU1LjI5NiA4Mi45NDQtMTAwLjM1MiAxNDAuOC0xMzAuMDQ4LTEyLjggMzYuMzUyLTI3LjY0OCA4NS41MDQtMzguNCAxNDIuODQ4SDM5OS4zNmM4LjcwNC01Ny44NTYgMjMuNTUyLTExOS4yOTYgNDUuMDU2LTE3OS4ySDQ0MC4zMmMyMy41NTItNC4wOTYgNDcuMTA0LTYuMTQ0IDcyLjcwNC02LjE0NHM0OS4xNTIgMi4wNDggNzIuNzA0IDguNzA0YzIxLjUwNCA1OS45MDQgMzQuMzA0IDEyMy45MDQgNDUuMDU2IDE3OS4yaDk1Ljc0NGMtMTAuNzUyLTU3LjM0NC0yNS42LTEwNC40NDgtMzguNC0xNDAuOCA1NS4yOTYgMjkuNjk2IDEwMi40IDc0Ljc1MiAxMzYuNzA0IDEyOCAwIDQuMDk2IDIuMDQ4IDYuNjU2IDIuMDQ4IDEwLjc1Mkg5NDcuMmMtNzAuMTQ0LTE3MC40OTYtMjM5LjEwNC0yOTAuMzA0LTQzNS4yLTI5MC4zMDRDMzEzLjM0NCA0Mi40OTYgMTQ0Ljg5NiAxNjIuMzA0IDc0Ljc1MiAzMzIuOGgxMjEuODU2Yy0wLjUxMi00LjA5NiAyLjA0OC0xMC43NTIgNC4wOTYtMTIuOHogbTc4MC44IDE4NS44NTZoLTE3Ny4xNTJWNDQ4aDE3MC40OTZjLTIuMDQ4LTIxLjUwNC02LjE0NC00Mi40OTYtMTAuNzUyLTU3LjM0NGgtMjE3LjZ2MTc3LjE1MmgxNzcuMTUydjU5LjkwNGgtMTc3LjE1MnY1NS4yOTZoMjA0LjhjMTkuNDU2LTQ5LjE1MiAyNS42LTk4LjMwNCAyNy42NDgtMTQyLjg0OHYyNS42bDIuNTYtNTkuOTA0ek0yNzUuNDU2IDYyMy4xMDRWNDQ4UzI3MS4zNiAzODguMDk2IDIxNS41NTIgMzg4LjA5Nkg1OS45MDRjLTE2Ljg5NiA2Ni4wNDgtMzEuNzQ0IDE4MS4yNDggMTAuNzUyIDI5NC40aDE0NC44OTZjMi4wNDggMCA1OS45MDQgMCA1OS45MDQtNTkuMzkyeiBtLTU3Ljg1NiAyLjA0OEgxMDAuMzUydi0xNzkuMmgxMTcuMjQ4djE3OS4yeiBtNDcxLjU1MiAyMDIuNzUyYzEwLjc1Mi0yNy42NDggMTYuODk2LTU3LjM0NCAyMy41NTItODIuOTQ0aC05My42OTZjLTE0Ljg0OCA2OC4wOTYtMzEuNzQ0IDExMy4xNTItMzYuMzUyIDEyNS45NTItMjMuNTUyIDQuMDk2LTQ3LjEwNCA2LjY1Ni03Mi43MDQgNi42NTYtMjMuNTUyIDAtNDUuMDU2LTIuMDQ4LTY2LjA0OC02LjY1Ni0yLjA0OC00LjA5Ni0yMS41MDQtNDkuMTUyLTM2LjM1Mi0xMjUuOTUySDMxMy4zNDRjNi4xNDQgMjkuNjk2IDE0Ljg0OCA1Ny4zNDQgMjUuNiA4Ny41NTItNDIuNDk2LTIxLjUwNC03OC44NDgtNTMuMjQ4LTEwOC41NDQtODcuNTUySDEwMi40YzgwLjg5NiAxNDAuOCAyMzIuNDQ4IDIzNi41NDQgNDA5LjYgMjM2LjU0NCAxNzUuMTA0IDAgMzI4LjcwNC05Ni4yNTYgNDA5LjYtMjM2LjU0NGgtMTMyLjA5NmMtMjcuNjQ4IDMzLjc5Mi01OS45MDQgNjEuNDQtMTAwLjM1MiA4Mi45NDR6IiBmaWxsPSIjMkI4NUZCIiBwLWlkPSI0Nzk3Ij48L3BhdGg+PC9zdmc+" }
+  - { name: 📤 BT&PT, <<: *proxy_group_config, proxies: [ 🎯 全球直连,📤 BT下载,♻️ 自动选择,⚡ 专线节点,🚀 手动切换1,🚀 手动切换2,🚀 手动切换3,🇭🇰 香港,🇹🇼 台湾,🇯🇵 日本,🇺🇲 美国,🇸🇬 新加坡,🇮🇳 印度,🇰🇷 韩国,⚖️ 散列-负载均衡,⚖️ 轮询-负载均衡 ], icon: "data:image/svg+xml;base64,PHN2ZyB0PSIxNzE4MDk2ODQ1MjI2IiBjbGFzcz0iaWNvbiIgdmlld0JveD0iMCAwIDEwMjQgMTAyNCIgdmVyc2lvbj0iMS4xIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHAtaWQ9IjM3NDciIHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIj48cGF0aCBkPSJNMTAyMC4xNjk1NzYgNTEwLjcyMzE5MmMwLTI4MC44OTc3NTYtMjI3LjI3MTgyLTUxMC43MjMxOTItNTEwLjcyMzE5Mi01MTAuNzIzMTkyQzIyOC41NDg2MjggMCAxLjI3NjgwOCAyMjcuMjcxODIgMS4yNzY4MDggNTEwLjcyMzE5MmMwIDIxNy4wNTczNTcgMTM1LjM0MTY0NiA0MDAuOTE3NzA2IDMyNi44NjI4NDMgNDc0Ljk3MjU2OUwyMzEuMTAyMjQ0IDUzOC44MTI5NjhsLTI4LjA4OTc3NS0xMjcuNjgwNzk4LTQ1Ljk2NTA4Ny0yMjIuMTY0NTg5IDE4Ni40MTM5NjUtNDAuODU3ODU1IDY4Ljk0NzYzMSAzMjEuNzU1NjExYzE3Ljg3NTMxMiA4Ni44MjI5NDMgNTguNzMzMTY3IDEzMi43ODgwMyAxMjIuNTczNTY2IDEyMC4wMTk5NSA1MS4wNzIzMTktMTAuMjE0NDY0IDc0LjA1NDg2My01My42MjU5MzUgNzkuMTYyMDk0LTg0LjI2OTMyNyAyLjU1MzYxNi0xMi43NjgwOCAwLTI4LjA4OTc3Ni0yLjU1MzYxNi00MC44NTc4NTVsLTc2LjYwODQ3OC0zNTQuOTUyNjE5IDE4Ni40MTM5NjUtNDAuODU3ODU1IDg2LjgyMjk0MiA0MDYuMDI0OTM4Qzg0My45NzAwNzUgNjM4LjQwMzk5IDkzOC40NTM4NjUgNjYzLjk0MDE1IDkzOC40NTM4NjUgNjYzLjk0MDE1bC0xODEuMzA2NzMzIDM4LjMwNDIzOWMtNTMuNjI1OTM1IDEyLjc2ODA4LTg5LjM3NjU1OS04NC4yNjkzMjctODkuMzc2NTU4LTg0LjI2OTMyN0g2NjUuMjE2OTU4Yy0xNS4zMjE2OTYgNDAuODU3ODU1LTMzLjE5NzAwNyAxMDkuODA1NDg2LTE2NS45ODUwMzggMTM3Ljg5NTI2Mi0xMC4yMTQ0NjQgMi41NTM2MTYtMTcuODc1MzEyIDIuNTUzNjE2LTI4LjA4OTc3NSA1LjEwNzIzMmw1Ni4xNzk1NTEgMjYzLjAyMjQ0NGMyNzMuMjM2OTA4LTEyLjc2ODA4IDQ5Mi44NDc4OC0yMzcuNDg2Mjg0IDQ5Mi44NDc4OC01MTMuMjc2ODA4eiIgZmlsbD0iIzhGQzI2NSIgcC1pZD0iMzc0OCI+PC9wYXRoPjwvc3ZnPg==" }
+  - { name: 🌐 DNS, <<: *proxy_group_config, proxies: *fast_first_group_list, icon: "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBzdGFuZGFsb25lPSJubyI/PjwhRE9DVFlQRSBzdmcgUFVCTElDICItLy9XM0MvL0RURCBTVkcgMS4xLy9FTiIgImh0dHA6Ly93d3cudzMub3JnL0dyYXBoaWNzL1NWRy8xLjEvRFREL3N2ZzExLmR0ZCI+PHN2ZyB0PSIxNzE4MDk3MDQ5NTc1IiBjbGFzcz0iaWNvbiIgdmlld0JveD0iMCAwIDEwMjQgMTAyNCIgdmVyc2lvbj0iMS4xIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHAtaWQ9IjQ3OTYiIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCI+PHBhdGggZD0iTTU3MS45MDQgNjgyLjQ5Nmg1Ny4zNDRWMzg4LjA5NmgtNTkuOTA0djE4My4yOTZMNDUyLjA5NiAzOTAuMTQ0di0yLjA0OEgzOTIuNzA0djI5NC40aDU5LjkwNFY0OTcuMTUybDExNy4yNDggMTgzLjI5NnYyLjA0OGgyLjA0OHpNMjAwLjcwNCAzMjBjMzQuMzA0LTU1LjI5NiA4Mi45NDQtMTAwLjM1MiAxNDAuOC0xMzAuMDQ4LTEyLjggMzYuMzUyLTI3LjY0OCA4NS41MDQtMzguNCAxNDIuODQ4SDM5OS4zNmM4LjcwNC01Ny44NTYgMjMuNTUyLTExOS4yOTYgNDUuMDU2LTE3OS4ySDQ0MC4zMmMyMy41NTItNC4wOTYgNDcuMTA0LTYuMTQ0IDcyLjcwNC02LjE0NHM0OS4xNTIgMi4wNDggNzIuNzA0IDguNzA0YzIxLjUwNCA1OS45MDQgMzQuMzA0IDEyMy45MDQgNDUuMDU2IDE3OS4yaDk1Ljc0NGMtMTAuNzUyLTU3LjM0NC0yNS42LTEwNC40NDgtMzguNC0xNDAuOCA1NS4yOTYgMjkuNjk2IDEwMi40IDc0Ljc1MiAxMzYuNzA0IDEyOCAwIDQuMDk2IDIuMDQ4IDYuNjU2IDIuMDQ4IDEwLjc1Mkg5NDcuMmMtNzAuMTQ0LTE3MC40OTYtMjM5LjEwNC0yOTAuMzA0LTQzNS4yLTI5MC4zMDRDMzEzLjM0NCA0Mi40OTYgMTQ0Ljg5NiAxNjIuMzA0IDc0Ljc1MiAzMzIuOGgxMjEuODU2Yy0wLjUxMi00LjA5NiAyLjA0OC0xMC43NTIgNC4wOTYtMTIuOHogbTc4MC44IDE4NS44NTZoLTE3Ny4xNTJWNDQ4aDE3MC40OTZjLTIuMDQ4LTIxLjUwNC02LjE0NC00Mi40OTYtMTAuNzUyLTU3LjM0NGgtMjE3LjZ2MTc3LjE1MmgxNzcuMTUydjU5LjkwNGgtMTc3LjE1MnY1NS4yOTZoMjA0LjhjMTkuNDU2LTQ5LjE1MiAyNS42LTk4LjMwNCAyNy42NDgtMTQyLjg0OHYyNS42bDIuNTYtNTkuOTA0ek0yNzUuNDU2IDYyMy4xMDRWNDQ4UzI3MS4zNiAzODguMDk2IDIxNS41NTIgMzg4LjA5Nkg1OS45MDRjLTE2Ljg5NiA2Ni4wNDgtMzEuNzQ0IDE4MS4yNDggMTAuNzUyIDI5NC40aDE0NC44OTZjMi4wNDggMCA1OS45MDQgMCA1OS45MDQtNTkuMzkyeiBtLTU3Ljg1NiAyLjA0OEgxMDAuMzUydi0xNzkuMmgxMTcuMjQ4djE3OS4yeiBtNDcxLjU1MiAyMDIuNzUyYzEwLjc1Mi0yNy42NDggMTYuODk2LTU3LjM0NCAyMy41NTItODIuOTQ0aC05My42OTZjLTE0Ljg0OCA2OC4wOTYtMzEuNzQ0IDExMy4xNTItMzYuMzUyIDEyNS45NTItMjMuNTUyIDQuMDk2LTQ3LjEwNCA2LjY1Ni03Mi43MDQgNi42NTYtMjMuNTUyIDAtNDUuMDU2LTIuMDQ4LTY2LjA0OC02LjY1Ni0yLjA0OC00LjA5Ni0yMS41MDQtNDkuMTUyLTM2LjM1Mi0xMjUuOTUySDMxMy4zNDRjNi4xNDQgMjkuNjk2IDE0Ljg0OCA1Ny4zNDQgMjUuNiA4Ny41NTItNDIuNDk2LTIxLjUwNC03OC44NDgtNTMuMjQ4LTEwOC41NDQtODcuNTUySDEwMi40YzgwLjg5NiAxNDAuOCAyMzIuNDQ4IDIzNi41NDQgNDA5LjYgMjM2LjU0NCAxNzUuMTA0IDAgMzI4LjcwNC05Ni4yNTYgNDA5LjYtMjM2LjU0NGgtMTMyLjA5NmMtMjcuNjQ4IDMzLjc5Mi01OS45MDQgNjEuNDQtMTAwLjM1MiA4Mi45NDR6IiBmaWxsPSIjMkI4NUZCIiBwLWlkPSI0Nzk3Ij48L3BhdGg+PC9zdmc+" }
   - { name: 🎯 全球直连, <<: *proxy_group_config, proxies: [ DIRECT,REJECT,♻️ 自动选择,⚡ 专线节点,🚀 手动切换1,🚀 手动切换2,🚀 手动切换3 ], icon: https://clash-verge-rev.github.io/assets/icons/link.svg}
   - { name: 🚫 广告拦截, <<: *proxy_group_config, proxies: [ REJECT,DIRECT ], icon: https://clash-verge-rev.github.io/assets/icons/block.svg }
   - { name: 🐟 漏网之鱼, <<: *proxy_group_config, icon: https://clash-verge-rev.github.io/assets/icons/fish.svg }
-  - { name: ⚖️ 轮询-负载均衡, <<: *fast_sub_proxy_group_config, strategy: round-robin, icon: https://clash-verge-rev.github.io/assets/icons/balance.svg }
-  - { name: ⚖️ 散列-负载均衡, <<: *fast_sub_proxy_group_config, strategy: consistent-hashing, icon: https://clash-verge-rev.github.io/assets/icons/merry_go.svg }
+  - { name: ⚖️ 轮询-负载均衡, <<: *fast_sub_proxy_group_config, strategy: round-robin, exclude-filter: *dedicated_line_filter, lazy: true, icon: https://clash-verge-rev.github.io/assets/icons/balance.svg }
+  - { name: ⚖️ 散列-负载均衡, <<: *fast_sub_proxy_group_config, strategy: consistent-hashing, exclude-filter: *dedicated_line_filter, lazy: true, icon: https://clash-verge-rev.github.io/assets/icons/merry_go.svg }
   #分隔,下面是地区分组
   - { name: 🇭🇰 香港, <<: *fast_sub_proxy_group_config, filter: "(?i)港|🇭🇰|HK|Hong Kong|HongKong", icon: https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Hong_Kong.png }
   - { name: 🇹🇼 台湾, <<: *fast_sub_proxy_group_config, filter: "(?i)台|🇹🇼|Taiwan|新北|彰化", icon: https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Taiwan.png }
@@ -211,6 +343,7 @@ proxy-groups:
   - { name: 🇺🇲 美国, <<: *fast_sub_proxy_group_config, filter: "(?i)美|🇺🇸|us|unitedstates|United States|美|波特兰|达拉斯|俄勒冈|凤凰城|费利蒙|硅谷|拉斯维加斯|洛杉矶|圣何塞|圣克拉拉|西雅图|芝加哥", icon: https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/United_States.png }
   - { name: 🇸🇬 新加坡, <<: *fast_sub_proxy_group_config, filter: "(?i)(新|🇸🇬|SG|Singapore|新加坡|坡|狮城)", icon: https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Singapore.png }
   - { name: 🇮🇳 印度, <<: *fast_sub_proxy_group_config, filter: "(?i)(🇮🇳|India|印度)", icon: https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/India.png }
+  - { name: 🇰🇷 韩国, <<: *fast_sub_proxy_group_config, filter: "(?i)(🇰🇷|韩|KR|KOR|Korea)", icon: https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Korea.png }
 
 #ipcidr: &ipcidr     { type: http,     behavior: ipcidr,    interval: 86400 }
 domain: &domain     { type: http,     behavior: domain,    interval: 86400 }
@@ -234,6 +367,10 @@ rule-providers:
   OpenAI: { <<: *classical, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/OpenAI/OpenAI_No_Resolve.yaml,                      path: ./ruleset/OpenAi_No_Resolve.yaml }
   Gemini: { <<: *classical, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/Gemini/Gemini_No_Resolve.yaml,                      path: ./ruleset/Gemini_No_Resolve.yaml }
   Claude: { <<: *classical, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/Claude/Claude_No_Resolve.yaml,                      path: ./ruleset/Claude_No_Resolve.yaml }
+  CiCi: { <<: *classical, url: https://cdn.jsdelivr.net/gh/monsterhxw/ACL4SSR@master/Clash/Ruleset/AI.list,                      path: ./ruleset/CiCi_No_Resolve.txt, format: text }
+  CiCi_All: { <<: *classical, url: https://cdn.jsdelivr.net/gh/szkane/ClashRuleSet@main//Clash/Ruleset/CiciAi.list,                      path: ./ruleset/CiCi_All_No_Resolve.txt, format: text }
+  CiCi & Coze: { <<: *classical, url: https://cdn.jsdelivr.net/gh/MalikWilliams1greher/rule@main/surge/coze.list,                      path: ./ruleset/CiCi_Coze_No_Resolve.txt, format: text }
+  AI: { <<: *classical, url: https://cdn.jsdelivr.net/gh/Repcz/Tool@X/Clash/Rules/AI.list,                      path: ./ruleset/AI_No_Resolve.txt, format: text }
   # 流媒体相关
   BiliBili: { <<: *classical, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/BiliBili/BiliBili_No_Resolve.yaml,                  path: ./ruleset/BiliBili_No_Resolve.yaml }
   Bahamut: { <<: *classical, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/Bahamut/Bahamut_No_Resolve.yaml,                    path: ./ruleset/Bahamut_No_Resolve.yaml }
@@ -263,13 +400,15 @@ rule-providers:
   # 游戏相关
   SteamCN: { <<: *classical, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/SteamCN/SteamCN_No_Resolve.yaml,                path: ./ruleset/SteamCN_No_Resolve.yaml }
   Steam: { <<: *classical, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/Steam/Steam_No_Resolve.yaml,                path: ./ruleset/Steam_No_Resolve.yaml }
+  GameDownloadCN: { <<: *classical, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/Game/GameDownloadCN/GameDownloadCN.yaml,                path: ./ruleset/GameDownloadCN.yaml }
+  GameDownload: { <<: *classical, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/Game/GameDownload/GameDownload.yaml,                path: ./ruleset/GameDownload.yaml }
   # Game:        {<<: *classical, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/Game/Game_No_Resolve.yaml,                          path: ./ruleset/Game_No_Resolve.yaml         }
 
   # 代理相关
-  Proxy: { <<: *classical, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/Proxy/Proxy_No_Resolve.yaml,                path: ./ruleset/Proxy_No_Resolve.yaml }
-  Proxy_Domain: { <<: *domain, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/Proxy/Proxy_Domain.yaml,                path: ./ruleset/Proxy_Domain.yaml }
-  # Global:   {<<: *classical, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/Global/Global_No_Resolve.yaml,                path: ./ruleset/Global_No_Resolve.yaml    }
-  # Global_Domain:   {<<: *domain, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/Global/Global_Domain.yaml,                path: ./ruleset/Global_Domain.yaml    }
+  # Proxy: { <<: *classical, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/Proxy/Proxy_No_Resolve.yaml,                path: ./ruleset/Proxy_No_Resolve.yaml }
+  # Proxy_Domain: { <<: *domain, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/Proxy/Proxy_Domain.yaml,                path: ./ruleset/Proxy_Domain.yaml }
+  Global:   {<<: *classical, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/Global/Global_No_Resolve.yaml,                path: ./ruleset/Global_No_Resolve.yaml    }
+  Global_Domain:   {<<: *domain, url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/Global/Global_Domain.yaml,                path: ./ruleset/Global_Domain.yaml    }
 
 
 rules: # 分流Policy
@@ -277,6 +416,11 @@ rules: # 分流Policy
   - RULE-SET,OpenAI,🤖 OpenAI
   - RULE-SET,Gemini,🤖 Gemini
   - RULE-SET,Claude,🤖 Claude
+  - RULE-SET,CiCi,🤖 CiCi & Coze
+  - RULE-SET,CiCi_All,🤖 CiCi & Coze
+  - RULE-SET,CiCi & Coze,🤖 CiCi & Coze
+  - RULE-SET,AI,🤖 其他AI
+  - DOMAIN-SUFFIX,sharepoint.cn,🎯 全球直连
   - GEOSITE,onedrive,☁️ OneDrive
   - RULE-SET,Microsoft,Ⓜ️ 微软服务
   - RULE-SET,Telegram,📲 电报消息
@@ -284,16 +428,20 @@ rules: # 分流Policy
   - RULE-SET,Bahamut,📺 巴哈姆特
   - RULE-SET,YouTube,📹 YouTube
   - RULE-SET,Google,🔍 谷歌服务
-  - GEOSITE,steam@cn,🎮 SteamCN
-  - RULE-SET,Steam,🎮 Steam
+  - GEOSITE,steam@cn,🎯 全球直连
+  - RULE-SET,GameDownloadCN,🎯 全球直连
+  - RULE-SET,GameDownload,🎯 全球直连
+  - RULE-SET,Steam,🎮 游戏平台
   - RULE-SET,Spotify,🎵 Spotify
   - RULE-SET,TikTok,🎼 TikTok
   - GEOSITE,tracker,📤 BT&PT
   - RULE-SET,IPTVOther,📺 海外IPTV
   - RULE-SET,IPTVOther_Domain,📺 海外IPTV
   - RULE-SET,Duolingo,🦉 多邻国
-  - RULE-SET,Proxy,🚀 节点选择
-  - RULE-SET,Proxy_Domain,🚀 节点选择
+#  - DOMAIN-SUFFIX,nexon.com,🇰🇷 韩国
+#  - DOMAIN-SUFFIX,nexoncdn.co.kr,🇰🇷 韩国
+  - RULE-SET,Global,🚀 节点选择
+  - RULE-SET,Global_Domain,🚀 节点选择
   #  - RULE-SET,IPTVMainland,🎯 全球直连
   #  - RULE-SET,IPTVMainland_IP,🎯 全球直连
   #  - RULE-SET,ChinaIP,🎯 全球直连
